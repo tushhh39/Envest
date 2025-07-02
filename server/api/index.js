@@ -20,7 +20,7 @@ webPush.setVapidDetails('mailto:your-email@example.com', vapidKeys.publicKey, va
 let subscriptions = [];
 
 app.use(cors({
-  origin: 'https://envest-mern.vercel23.app',
+  origin: 'https://envest-mern23.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
