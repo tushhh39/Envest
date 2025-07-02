@@ -3,7 +3,7 @@ import axios from 'axios';
 import './App.css';
 
 // The URL where your Express backend is running
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://envest-mern23.vercel.app/api';
 // Your VAPID Public Key from the .env file
 const VAPID_PUBLIC_KEY = 'BNHAPDB6AmpBOmSfpcPFnB0_byZAmSL80e-gGa_cyHqK_RnvpWyDOgF54K24603J5k20q0rT4PgTECn8ZBFUBgM'; // <-- IMPORTANT: PASTE YOUR PUBLIC KEY HERE
 
