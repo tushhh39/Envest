@@ -2,22 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
-// The URL where your Express backend is running
-const API_URL = 'https://envest-mern23.vercel.app/api';
-// Your VAPID Public Key from the .env file
-const VAPID_PUBLIC_KEY = 'BNHAPDB6AmpBOmSfpcPFnB0_byZAmSL80e-gGa_cyHqK_RnvpWyDOgF54K24603J5k20q0rT4PgTECn8ZBFUBgM'; // <-- IMPORTANT: PASTE YOUR PUBLIC KEY HERE
+// ===================================================================================
 
-// Helper function to convert urlB64ToUint8Array
-function urlB64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+// Storing API keys in frontend code is insecure and should not be done in production.
+// These keys will be visible to anyone inspecting your app's source code.
+// For production, use a serverless function or a backend proxy to protect your keys.
+// ===================================================================================
+const NEWSDATA_API_KEY = 'pub_04399dc063224203917f923e999dc182';
+const GEMINI_API_KEY = 'AIzaSyCz70oV2m89o48UFksQarxGBJezclHeTvk';
 
 function App() {
   const [portfolio, setPortfolio] = useState(['RELIANCE', 'TCS', 'INFY']);
@@ -25,39 +17,36 @@ function App() {
   const [generalNews, setGeneralNews] = useState([]);
   const [filteredNews, setFilteredNews] = useState(null);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
-  const [isSubscribed, setIsSubscribed] = useState(false);
 
   // Effect to fetch general news when the component first loads
   useEffect(() => {
     const fetchNews = async () => {
       setIsLoadingNews(true);
+      // Directly call the NewsData.io API
+      const url = `https://newsdata.io/api/1/news?apikey=${NEWSDATA_API_KEY}&language=en&country=in&category=business`;
+
       try {
-        const response = await axios.get(`${API_URL}/news`);
+        const response = await axios.get(url);
         console.log('Fetched general news:', response.data);
-        setGeneralNews(response.data.articles || []);
+        // The raw API response uses 'results', not 'articles'
+        setGeneralNews(response.data.results || []);
       } catch (error) {
         console.error('❌ Failed to fetch general news:', error.message);
+        // Add user-friendly error message
+        setGeneralNews([{ title: 'Error: Could not fetch general news. Check API Key.' }]);
       }
       setIsLoadingNews(false);
     };
-    fetchNews();
-  }, []);
-  
 
-  // Effect to check for existing push notification subscription on load
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.pushManager.getSubscription().then(sub => {
-          if (sub) {
-            setIsSubscribed(true);
-          }
-        });
-      });
+    if (NEWSDATA_API_KEY === 'PASTE_YOUR_NEWSDATA_API_KEY_HERE') {
+        alert("Please paste your NewsData.io API key in App.js");
+        setIsLoadingNews(false);
+    } else {
+        fetchNews();
     }
   }, []);
 
-  // Main function to update portfolio, fetch news for it, and trigger analysis
+  // Main function to update portfolio and fetch news for it
   const handlePortfolioUpdate = async () => {
     const newPortfolio = inputValue
       .split(',')
@@ -68,19 +57,27 @@ function App() {
     setFilteredNews([]); // Clear old results immediately
 
     if (newPortfolio.length === 0) return;
+    if (NEWSDATA_API_KEY === 'PASTE_YOUR_NEWSDATA_API_KEY_HERE') {
+        alert("Please paste your NewsData.io API key in App.js");
+        return;
+    }
 
     const query = newPortfolio.join(' OR ');
+    // Directly call the NewsData.io search endpoint
+    const url = `https://newsdata.io/api/1/news?apikey=${NEWSDATA_API_KEY}&q=${encodeURIComponent(query)}&language=en&category=business`;
+
     try {
-      // Set loading state for the filtered news section
       setFilteredNews([{ isLoading: true, title: `Searching news for ${query}...` }]);
-      const response = await axios.post(`${API_URL}/searchNews`, { query });
+      const response = await axios.get(url);
       
-      const results = response.data.articles.map(article => ({
+      // The raw API response uses 'results'
+      const results = response.data.results.map(article => ({
         ...article,
-        isLoading: true, // Set to true to trigger analysis spinner
+        isLoading: true, // Set to true to trigger analysis spinner for each card
       }));
       
       setFilteredNews(results);
+      // Trigger analysis for each fetched article
       results.forEach(article => analyzeHeadline(article, newPortfolio));
 
     } catch (err) {
@@ -89,76 +86,67 @@ function App() {
     }
   };
 
-  // Function to call our backend's AI analysis endpoint
+  // Function to call Google Gemini API directly
   const analyzeHeadline = async (article, currentPortfolio) => {
-    // A more robust way to find which stock the headline is about
+    if (GEMINI_API_KEY === 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
+        setFilteredNews(prev => prev.map(n => n.link === article.link ? { ...n, isLoading: false, reasoning: 'Gemini API key not provided.' } : n));
+        return;
+    }
+
     const relevantStock = currentPortfolio.find(stock =>
         new RegExp(`\\b${stock}\\b`, 'i').test(article.title)
     );
 
     if (!relevantStock) {
-        // If no direct match, just mark as done without analysis
         setFilteredNews(prevNews =>
             prevNews.map(n => n.link === article.link ? { ...n, isLoading: false, reasoning: 'No specific portfolio stock mentioned.' } : n)
         );
         return;
     }
 
-    try {
-      const response = await axios.post(`${API_URL}/analyze`, {
-        headline: article.title,
-        stock: relevantStock,
-      });
+    // This logic is moved directly from your backend
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+    const prompt = `
+      Analyze the following news headline for its potential impact on the Indian stock: "${relevantStock}".
+      Headline: "${article.title}"
+      
+      Strictly provide your analysis ONLY in a raw JSON object format with three keys:
+      1. "sentiment": A string which must be one of "Positive", "Negative", or "Neutral".
+      2. "confidence": A number between 0 and 1 representing your confidence.
+      3. "reasoning": A brief, one-sentence explanation for your sentiment analysis.
+    `;
+    const requestBody = {
+      contents: [{ parts: [{ text: prompt }] }],
+      safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+      ],
+      generationConfig: { responseMimeType: "application/json" }
+    };
 
-      const analysis = response.data;
+    try {
+      const response = await axios.post(url, requestBody);
+      const analysisText = response.data.candidates[0].content.parts[0].text;
+      const analysisJson = JSON.parse(analysisText);
+
       setFilteredNews(prevNews =>
         prevNews.map(n =>
           n.link === article.link
-            ? { ...n, ...analysis, isLoading: false }
+            ? { ...n, ...analysisJson, isLoading: false }
             : n
         )
       );
     } catch (error) {
-      console.error('❌ Analysis failed for:', article.title, error.message);
+      console.error('❌ Gemini analysis failed for:', article.title, error.message);
       setFilteredNews(prevNews =>
         prevNews.map(n =>
           n.link === article.link
-            ? { ...n, reasoning: 'Analysis failed.', isLoading: false }
+            ? { ...n, reasoning: 'AI analysis failed.', isLoading: false }
             : n
         )
       );
-    }
-  };
-
-  // Function to handle push notification subscription
-  const handleSubscription = async () => {
-    if (!('serviceWorker' in navigator)) {
-        alert('Push notifications not supported by your browser.');
-        return;
-    }
-
-    try {
-        const register = await navigator.serviceWorker.register('/sw.js');
-        let subscription = await register.pushManager.getSubscription();
-        
-        if (subscription) {
-            alert('You are already subscribed!');
-            setIsSubscribed(true);
-            return;
-        }
-
-        subscription = await register.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
-        });
-
-        await axios.post(`${API_URL}/subscribe`, subscription);
-        alert('Subscribed to notifications successfully!');
-        setIsSubscribed(true);
-    } catch (error) {
-        console.error('Failed to subscribe:', error);
-        alert('Failed to subscribe to notifications.');
-        setIsSubscribed(false);
     }
   };
 
@@ -180,9 +168,7 @@ function App() {
               placeholder="e.g., RELIANCE, TCS, INFY"
             />
             <button onClick={handlePortfolioUpdate}>Update & Analyze</button>
-            <button onClick={handleSubscription} disabled={isSubscribed} className="subscribe-btn">
-              {isSubscribed ? 'Subscribed' : 'Enable Notifications'}
-            </button>
+            {/* The "Enable Notifications" button has been removed as it's no longer functional */}
           </div>
         </div>
 
@@ -190,23 +176,18 @@ function App() {
           <section>
             <h2>News For Your Portfolio ({portfolio.join(', ')})</h2>
             <div className="news-list">
-  {/* Case 1: Initial state, before any search has been run */}
-  {filteredNews === null ? (
-    <p className="placeholder-text">Enter stocks above and click "Update" to see relevant news.</p>
-
-  /* Case 2: A search was run, but it returned results */
-  ) : filteredNews.length > 0 ? (
-    filteredNews.map((item, index) => <NewsCard key={item.link || index} item={item} />)
-
-  /* Case 3: A search was run and it returned 0 results */
-  ) : (
-    <p className="placeholder-text">No results found for your query. Try searching for other stocks.</p>
-  )}
-</div>
+              {filteredNews === null ? (
+                <p className="placeholder-text">Enter stocks and click "Update" to see relevant news.</p>
+              ) : filteredNews.length > 0 ? (
+                filteredNews.map((item, index) => <NewsCard key={item.link || index} item={item} />)
+              ) : (
+                <p className="placeholder-text">No results found. Try different stocks.</p>
+              )}
+            </div>
           </section>
 
           <section>
-            <h2>General Market News (News.Data.io)</h2>
+            <h2>General Market News</h2>
             <div className="news-list">
               {isLoadingNews ? (
                 <p className="placeholder-text">Loading news...</p>
@@ -223,57 +204,57 @@ function App() {
   );
 }
 
-// Reusable component for news card (Unchanged)
+// Reusable NewsCard component remains unchanged
 const NewsCard = ({ item }) => {
-  const getSentimentClass = (sentiment) => {
-    if (sentiment === 'Positive') return 'sentiment-positive';
-    if (sentiment === 'Negative') return 'sentiment-negative';
-    if (sentiment === 'Neutral') return 'sentiment-neutral';
-    return '';
-  };
-
-  const formattedDate = item.pubDate
-    ? new Date(item.pubDate).toLocaleString('en-IN', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : null;
-
-  return (
-    <div className="news-card">
-      {item.link ? (
-        <a href={item.link} target="_blank" rel="noopener noreferrer">
+    const getSentimentClass = (sentiment) => {
+      if (sentiment === 'Positive') return 'sentiment-positive';
+      if (sentiment === 'Negative') return 'sentiment-negative';
+      if (sentiment === 'Neutral') return 'sentiment-neutral';
+      return '';
+    };
+  
+    const formattedDate = item.pubDate
+      ? new Date(item.pubDate).toLocaleString('en-IN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })
+      : null;
+  
+    return (
+      <div className="news-card">
+        {item.link ? (
+          <a href={item.link} target="_blank" rel="noopener noreferrer">
+            <h3>{item.title}</h3>
+          </a>
+        ) : (
           <h3>{item.title}</h3>
-        </a>
-      ) : (
-        <h3>{item.title}</h3>
-      )}
-      
-      {formattedDate && (
-        <p className="news-date" style={{ fontSize: '0.85em', color: '#555' }}>
-          {formattedDate}
-        </p>
-      )}
-
-      {item.isLoading ? (
-        <p className="analysis-text">Analyzing with AI...</p>
-      ) : item.sentiment && (
-        <div className="analysis-section">
-          <div className="sentiment-badge-container">
-            <span className={`sentiment-badge ${getSentimentClass(item.sentiment)}`}>
-              {item.sentiment}
-            </span>
-            <p className="reasoning-text">{item.reasoning}</p>
+        )}
+        
+        {formattedDate && (
+          <p className="news-date" style={{ fontSize: '0.85em', color: '#555' }}>
+            {formattedDate}
+          </p>
+        )}
+  
+        {item.isLoading ? (
+          <p className="analysis-text">Analyzing with AI...</p>
+        ) : item.sentiment && (
+          <div className="analysis-section">
+            <div className="sentiment-badge-container">
+              <span className={`sentiment-badge ${getSentimentClass(item.sentiment)}`}>
+                {item.sentiment}
+              </span>
+              <p className="reasoning-text">{item.reasoning}</p>
+            </div>
+            {item.confidence && (
+              <p className="confidence-text">
+                Confidence: {(item.confidence * 100).toFixed(0)}%
+              </p>
+            )}
           </div>
-          {item.confidence && (
-            <p className="confidence-text">
-              Confidence: {(item.confidence * 100).toFixed(0)}%
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+        )}
+      </div>
+    );
+  };
 
 export default App;
