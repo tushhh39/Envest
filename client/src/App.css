@@ -44,6 +44,7 @@ body {
   max-width: 1300px;
   margin: 0 auto;
   padding: 20px;
+  transition: padding 0.3s ease; /* Responsive Change: Smooth padding transition */
 }
 
 /* --- Header --- */
@@ -58,6 +59,7 @@ body {
   color: #ffffff;
   /* Subtle 3D text effect */
   text-shadow: 0 0 10px rgba(0, 188, 212, 0.5), 0 0 20px rgba(0, 188, 212, 0.3);
+  transition: font-size 0.3s ease; /* Responsive Change: Smooth font size transition */
 }
 
 .app-header p {
@@ -132,6 +134,7 @@ body {
     transform: scale(0.98); /* 3D press effect */
 }
 
+/* This class was in the old code for the removed push notification button */
 .input-group button.subscribe-btn[disabled] {
     background-image: linear-gradient(to right, #4caf50, #2e7d32);
     box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
@@ -255,6 +258,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap; /* Responsive Change: Allow badge and text to wrap */
 }
 
 .sentiment-badge {
@@ -264,6 +268,7 @@ body {
   font-weight: 600;
   color: #ffffff;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+  flex-shrink: 0; /* Responsive Change: Prevents badge from shrinking */
 }
 
 .sentiment-positive { background: linear-gradient(to right, #11998e, #38ef7d); }
@@ -275,6 +280,7 @@ body {
   color: #c0c0c0;
   margin: 0;
   flex: 1;
+  min-width: 150px; /* Responsive Change: Helps with wrapping behavior */
 }
 
 .confidence-text {
@@ -284,18 +290,90 @@ body {
   text-align: right;
 }
 
+/* --- ================== --- */
 /* --- Responsive Design --- */
+/* --- ================== --- */
+
+/* For Tablets and smaller desktops */
 @media (max-width: 900px) {
   .news-grid {
     grid-template-columns: 1fr;
+    gap: 30px; /* Responsive Change: Reduced gap for stacked layout */
   }
 }
 
+/* For smaller tablets and large phones */
 @media (max-width: 768px) {
+  .container {
+    padding: 15px; /* Responsive Change: Less horizontal padding */
+  }
+
   .app-header h1 {
     font-size: 2.2rem;
   }
+  
+  .app-header p {
+    font-size: 1rem; /* Responsive Change: Slightly smaller subtitle */
+  }
+
+  .portfolio-section {
+    padding: 20px; /* Responsive Change: Less padding */
+  }
+
   .input-group {
     flex-direction: column;
+  }
+  
+  /* Responsive Change: Make input and button full-width when stacked */
+  .input-group input, 
+  .input-group button {
+    width: 100%;
+    max-width: none; /* Override the max-width set for desktop */
+  }
+
+  .news-list {
+    /* Responsive Change: Give a little more room for the content above */
+    max-height: 55vh; 
+  }
+
+  .news-card:hover {
+    /* Responsive Change: Tone down 3D effect on touch devices */
+    transform: translateY(-5px); 
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* For mobile phones */
+@media (max-width: 480px) {
+  .app-header h1 {
+    font-size: 1.8rem; /* Responsive Change: Further reduce heading size */
+  }
+  .app-header p {
+    font-size: 0.9rem;
+  }
+
+  .portfolio-section h2 {
+    font-size: 1.25rem;
+  }
+
+  .news-grid h2 {
+    font-size: 1.2rem;
+  }
+
+  .news-card {
+    padding: 15px; /* Responsive Change: Less padding inside cards */
+  }
+
+  .news-card h3 {
+    font-size: 1rem; /* Responsive Change: Smaller headline in card */
+  }
+
+  .reasoning-text {
+    font-size: 0.85rem; /* Responsive Change: Smaller reasoning text */
+  }
+
+  .sentiment-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
   }
 }
