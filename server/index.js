@@ -17,11 +17,7 @@ const vapidKeys = {
   privateKey: process.env.VAPID_PRIVATE_KEY,
 };
 
-webPush.setVapidDetails(
-  'mailto:your-email@example.com', // Replace with your email
-  vapidKeys.publicKey,
-  vapidKeys.privateKey
-);
+webPush.setVapidDetails('mailto:avhadtushar68@gmail.com', vapidKeys.publicKey, vapidKeys.privateKey);
 
 // In-memory store for push subscriptions (for demonstration purposes)
 let subscriptions = [];
